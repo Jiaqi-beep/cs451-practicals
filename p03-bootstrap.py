@@ -86,6 +86,7 @@ N_MODELS = 100
 # sample 1 of them 100 times, to get a distribution of data for that!
 N_SAMPLES = 100
 
+'''
 seed_based_accuracies = []
 for randomness in range(N_MODELS):
     f_seed = DecisionTreeClassifier(random_state=RANDOM_SEED + randomness, **params)
@@ -97,7 +98,7 @@ bootstrap_based_accuracies = []
 # single seed, bootstrap-sampling of predictions:
 f_single = DecisionTreeClassifier(random_state=RANDOM_SEED, **params)
 f_single.fit(X_train, y_train)
-y_pred = f_single.predict(X_vali)
+y_pred = f_single.predict(X_vali)   ## <- predict on the whole test set
 
 # do the bootstrap:
 for trial in range(N_SAMPLES):
@@ -108,21 +109,55 @@ for trial in range(N_SAMPLES):
     bootstrap_based_accuracies.append(score)
 
 
-boxplot_data: List[List[float]] = [seed_based_accuracies, bootstrap_based_accuracies]
+# 2A - K bootstrap samples for each of M models
+seed_and_bootstrap_accuracies = []
+for i in range(N_MODELS):
+    f_both = DecisionTreeClassifier(random_state=RANDOM_SEED + i, **params)
+    f_both.fit(X_train, y_train)
+    y_2A_pred = f_both.predict(X_vali)   ## <- predict on the whole test set
+
+    for trial in range(N_SAMPLES):
+        resampled_pred, resampled_truth = resample(
+            y_2A_pred, y_vali, random_state=RANDOM_SEED + trial
+        )
+        new_score = accuracy_score(y_true=resampled_pred, y_pred=resampled_truth)
+        seed_and_bootstrap_accuracies.append(new_score)
+'''
+
+# 2B - ~10 max_depths of the decision tree
+
+params = {
+    "criterion": "gini",
+    "splitter": "best",
+}
+
+depth_accuracies = []
+for i in range(1, 11):
+    new_depth_accuracies = []
+    for randomness in range(N_MODELS):
+        f_depth = DecisionTreeClassifier(
+            random_state=RANDOM_SEED + randomness, max_depth = i, **params
+        )
+        f_depth.fit(X_train, y_train)
+        new_depth_accuracies.append(f_depth.score(X_vali, y_vali))
+    depth_accuracies.append(new_depth_accuracies)
+
+print(len(depth_accuracies))
+print(depth_accuracies[0])
+
+# Create confidence interval plots
+#boxplot_data: List[List[float]] = [seed_based_accuracies, bootstrap_based_accuracies, seed_and_bootstrap_accuracies]
+boxplot_data: List[List[float]] = depth_accuracies
 plt.boxplot(boxplot_data)
-plt.xticks(ticks=[1, 2], labels=["Seed-Based", "Bootstrap-Based"])
+#plt.xticks(ticks=[1, 2, 3], labels=["Seed-Based", "Bootstrap-Based", "Seed_and_Bootstrap-Based"])
+plt.xticks(ticks=list(range(1,11)))
 plt.xlabel("Sampling Method")
 plt.ylabel("Accuracy")
-plt.ylim([0.8, 1.0])
+plt.ylim([0.7, 1.0])
 plt.show()
 # if plt.show is not working, try opening the result of plt.savefig instead!
 # plt.savefig("dtree-variance.png") # This doesn't work well on repl.it.
 
-TODO("1. understand/compare the bounds generated between the two methods.")
-TODO("2. Do one of the two following experiments.")
-TODO(
-    "2A. Evaluation++: what happens to the variance if we do K bootstrap samples for each of M models?"
-)
-TODO(
-    "2B. Return to experimenting on the decision tree: modify the plot to show ~10 max_depths of the decision tree."
-)
+#TODO("1. understand/compare the bounds generated between the two methods.")
+# Both methods have similar medians. The distribution of bootstrap-based method is more spread out,
+# as large variations of test datasets, outliers for example, are sampled through resampling, creating variance.
