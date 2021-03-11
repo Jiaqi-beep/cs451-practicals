@@ -75,11 +75,11 @@ print(
 
 # Create a regression-tree object:
 f = DecisionTreeClassifier(
-    splitter="best",
+    splitter="random",
     max_features=None,
-    criterion="gini",
-    max_depth=None,
-    random_state=13,
+    criterion="entropy",
+    max_depth=8,
+    random_state=777,
 )  # type:ignore
 
 # train the tree!
@@ -89,12 +89,38 @@ f.fit(train_X, train_y)
 print("Score on Training: {:.3f}".format(f.score(train_X, train_y)))
 print("Score on Testing: {:.3f}".format(f.score(test_X, test_y)))
 
-## Actual 'practical' assignment.
-TODO(
-    "1. Figure out what all of the parameters I listed for the DecisionTreeClassifier do."
-)
+###########        Actual 'practical' assignment        ############
+#splitter{“best”, “random”}, default=best --- strategy for split at each level
+#max_features --- number of features to consider when looking for the best split
+#criterion --- gini or entropy --- determine the quality of the split
+#max_depth --- maximum depth of the tree
+#radom_state --- controls randomness of the estimator
+
 # Consult the documentation: https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html
-TODO("2. Pick one parameter, vary it, and find some version of the 'best' setting.")
+#2. Pick one parameter, vary it, and find some version of the 'best' setting
+import random
+
+params = {
+    "criterion": random.choice(["gini","entropy"]),
+    "splitter": random.choice(["best","random"]),
+}
+
+def train_and_test():
+    f = DecisionTreeClassifier(
+        splitter="best",
+        max_features=None,
+        criterion="gini",
+        max_depth=None,
+        random_state=13,
+    )  # type:ignore
+
+    # train the tree!
+    f.fit(train_X, train_y)
+
+    # did it memorize OK?
+    print("Score on Training: {:.3f}".format(f.score(train_X, train_y)))
+    print("Score on Testing: {:.3f}".format(f.score(test_X, test_y)))
+
 # Default performance:
 # There are 2079 training examples and 693 testing examples.
 # Score on Training: 1.000

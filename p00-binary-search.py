@@ -31,9 +31,9 @@ def __binary_search_rec(
         # base-case: found it!
         return mid
     elif query < data[mid]:
-        return TODO("left")
+        return __binary_search_rec(data, query, left, mid)
     else:
-        return TODO("right")
+        return __binary_search_rec(data, query, mid + 1, right)
 
 
 def binary_search(data: List[int], query: int) -> Optional[int]:
