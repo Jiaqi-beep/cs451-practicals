@@ -84,10 +84,15 @@ for sample_n in sample_subset:
 # First, try a line plot, with shaded variance regions:
 import matplotlib.pyplot as plt
 
+# convert our list of means/std to numpy arrays so we can add & subtract them.
 means = np.array(acc_mean)
 std = np.array(acc_std)
-plt.plot(sample_subset, acc_mean, "o-")
-plt.fill_between(sample_subset, means - std, means + std, alpha=0.2)
+# plot line from means
+plt.plot(percentages, acc_mean, "o-")
+# plot area from means & stddev
+plt.fill_between(percentages, means - std, means + std, alpha=0.2)
+
+# Manage axes/show:
 plt.xlabel("Percent Training Data")
 plt.ylabel("Mean Accuracy")
 plt.xlim([0, N])
@@ -112,3 +117,8 @@ simple_boxplot(
 #    - Even DecisionTreeClassifier has some more interesting behavior on these plots.
 # 2. Change the plots to operate over multiples of 50 samples, instead of percentages.
 #    - This will likely be how you want to make these plots for your project.
+
+# OPTIONAL CHALLENGE:
+#  Refactor the code so that you can evaluate multiple models in this fashion.
+#  Two different models at the same time will likely max out the visual utility of the plot.
+#  The boxplot will not be able to show both models at once.
