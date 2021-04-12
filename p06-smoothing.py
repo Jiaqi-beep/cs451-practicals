@@ -50,6 +50,7 @@ else:
         examples.append(keep)
 
 #%% Split data:
+#print(examples[0])
 
 RANDOM_SEED = 1234
 
@@ -75,13 +76,14 @@ from sklearn.feature_extraction.text import CountVectorizer
 word_features = CountVectorizer(
     strip_accents="unicode",
     lowercase=True,
-    ngram_range=(1, 1),
+    ngram_range=(1, 2),
 )
 
 # How does it take a whole paragraph and turn it into words?
 text_to_words = word_features.build_analyzer()
 # text_to_words is a function (str) -> List[str]
-assert text_to_words("Hello world!") == ["hello", "world"]
+#assert text_to_words("Hello world!") == ["hello", "world"]
+assert text_to_words("Hello world!") == ['hello', 'world', 'hello world']
 
 # Learn columns from training data (again)
 word_features.fit(ex_train)
@@ -103,7 +105,7 @@ from sklearn.naive_bayes import MultinomialNB
 
 # Try a couple alpha values (what to do with zero-prob words!)
 # Alpha can really be anything positive!
-for alpha in [0.1, 1.0, 10.0]:
+for alpha in [0.05, 0.1, 1.0, 10.0, 50.0]:
     m = MultinomialNB(alpha=alpha)
     m.fit(X_train, y_train)
     scores = m.predict_proba(X_vali)[:, 1]
@@ -122,14 +124,15 @@ from collections import Counter
 import typing
 
 
+# P(x|POETRY) / P(x|EVERYTHING) > some random constant?
 @dataclass
 class CountLanguageModel:
     """ The number of times each word has been observed. """
 
     counts: typing.Counter[str] = field(default_factory=Counter)
+    # default_factory: zero-argument callable that will be called when a default value is needed for this field
     """ The total number of observed words (any word)"""
-    total: int = 0
-    # Don't need an alpha
+    total: int = 0     # Don't need an alpha
 
     def add_example(self, words: List[str]) -> None:
         for word in words:
@@ -182,10 +185,10 @@ def score_words(
     return score
 
 
-#
+
 # The linear parameter is traditionally a non-zero, non-one probability:
 #     (0 < linear < 1)
-for linear in [0.1, 0.2, 0.3, 0.4, 0.5, 0.9]:
+for linear in [0.05, 0.1, 0.25, 0.3, 0.4, 0.45, 0.5, 0.9]:
     scores = []
     for ex in ex_vali:
         score = score_words(text_to_words(ex), linear, is_positive, is_random)

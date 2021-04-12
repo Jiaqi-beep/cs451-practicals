@@ -5,9 +5,9 @@ import sys
 import zipfile
 from typing import List, Dict, Optional, Any
 
-from sklearn.base import ClassifierMixin
+from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.utils import resample
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import accuracy_score, mean_squared_error, roc_auc_score
 import random
 
 
@@ -58,6 +58,28 @@ def bootstrap_accuracy(
             y_pred, y, random_state=trial + random_state
         )  # type:ignore
         score = accuracy_score(y_true=sample_truth, y_pred=sample_pred)  # type:ignore
+        dist.append(score)
+    return dist
+
+def bootstrap_regressor(
+    f: RegressorMixin,
+    X,  # numpy array
+    y,  # numpy array
+    num_samples: int = 100,
+    random_state: int = random.randint(0, 2 ** 32 - 1),
+) -> List[float]:
+    """
+    Take the regressor f, and compute it's bootstrapped accuracy over the dataset `X`,`y`.
+    Generate `num_samples` samples; and seed the resampler with `random_state`.
+    """
+    dist: List[float] = []
+    y_pred = f.predict(X)  # type:ignore
+    # do the bootstrap:
+    for trial in range(num_samples):
+        sample_pred, sample_truth = resample(
+            y_pred, y, random_state=trial + random_state
+        )  # type:ignore
+        score = mean_squared_error(y_true=sample_truth, y_pred=sample_pred)  # type:ignore
         dist.append(score)
     return dist
 

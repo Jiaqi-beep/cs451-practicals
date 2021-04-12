@@ -38,7 +38,6 @@ class JustWikiLabel:
     wiki_id: str
     is_literary: bool
 
-
 # Load our judgments/labels/truths/ys into this labels list:
 labels: List[JustWikiLabel] = []
 with open(dataset_local_path("tiny-wiki-labels.jsonl")) as fp:
@@ -47,7 +46,6 @@ with open(dataset_local_path("tiny-wiki-labels.jsonl")) as fp:
         labels.append(
             JustWikiLabel(wiki_id=entry["wiki_id"], is_literary=entry["truth_value"])
         )
-
 
 @dataclass
 class JoinedWikiData:
@@ -58,14 +56,18 @@ class JoinedWikiData:
 
 
 print(len(pages), len(labels))
-print(pages[0])
-print(labels[0])
+#print(pages[0])
+#print(labels[0])
 
 joined_data: Dict[str, JoinedWikiData] = {}
 
+for page in pages:
+    joined_data[page.wiki_id] = JoinedWikiData (
+        wiki_id = page.wiki_id, title = page.title, body = page.body, is_literary = True
+    )
+for label in labels:
+    joined_data[label.wiki_id].is_literary = label.is_literary
 
-# TODO("1. create a list of JoinedWikiData from the ``pages`` and ``labels`` lists.")
-# This challenge has some very short solutions, so it's more conceptual. If you're stuck after ~10-20 minutes of thinking, ask!
 ############### Problem 1 ends here ###############
 
 # Make sure it is solved correctly!
@@ -120,14 +122,19 @@ X_test = word_to_column.transform(ex_test)
 print("Ready to Learn!")
 from sklearn.linear_model import LogisticRegression, SGDClassifier, Perceptron
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 
 models = {
+    "RandomForest": RandomForestClassifier(),
     "SGDClassifier": SGDClassifier(),
     "Perceptron": Perceptron(),
     "LogisticRegression": LogisticRegression(),
     "DTree": DecisionTreeClassifier(),
 }
+
+for i in range(1, 20):
+    models["DTree-{}".format(i)] = DecisionTreeClassifier(max_depth = i)
 
 for name, m in models.items():
     m.fit(X_train, y_train)
@@ -138,6 +145,32 @@ for name, m in models.items():
     else:
         scores = m.predict_proba(X_vali)[:, 1]
     print("\tVali-AUC: {:.3}".format(roc_auc_score(y_score=scores, y_true=y_vali)))
+
+from sklearn.utils import resample
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+
+# Is it randomness? Use simple_boxplot and bootstrap_auc/bootstrap_acc to see if the differences are meaningful!
+from shared import bootstrap_accuracy, bootstrap_auc
+f = DecisionTreeClassifier()
+f.fit(X_train, y_train)
+bootstrap_acc = bootstrap_accuracy(
+        f = f, X = X_vali, y = y_vali
+    )
+bootstrap_auc = bootstrap_auc(
+        f = f, X = X_vali, y = y_vali
+ )
+
+print(bootstrap_acc[:1])
+print(bootstrap_auc[:1])
+
+plt.boxplot([bootstrap_acc, bootstrap_auc])
+plt.xticks(ticks=[1,2], labels=["Seed-bootstrap_acc", "bootstrap_auc"])
+plt.xlabel("DecisionTree bootstraps")
+plt.ylabel("Accuracy")
+plt.ylim([0.3, 1.0])
+plt.show()
+
 
 """
 Results should be something like:
@@ -156,9 +189,5 @@ DTree:
         Vali-AUC: 0.71
 """
 TODO("2. Explore why DecisionTrees are not beating linear models. Answer one of:")
-TODO("2.A. Is it a bad depth?")
-TODO("2.B. Do Random Forests do better?")
-TODO(
-    "2.C. Is it randomness? Use simple_boxplot and bootstrap_auc/bootstrap_acc to see if the differences are meaningful!"
-)
+
 TODO("2.D. Is it randomness? Control for random_state parameters!")

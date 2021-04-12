@@ -6,7 +6,6 @@ from shared import dataset_local_path, simple_boxplot
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 import json
-from sklearn.tree import DecisionTreeClassifier
 
 #%% load up the data
 examples = []
@@ -47,27 +46,34 @@ X_test: np.ndarray = scale.transform(rX_test)  # type:ignore
 
 #%% Actually compute performance for each % of training data
 N = len(y_train)
+print(N)
 num_trials = 100
-percentages = list(range(5, 100, 5))
-percentages.append(100)
+sample_subset = list(range(50, N, 50))
+sample_subset.append(N)
 scores = {}
 acc_mean = []
 acc_std = []
 
+#from sklearn.linear_model import Perceptron, LogisticRegression
+#from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+
 # Which subset of data will potentially really matter.
-for train_percent in percentages:
-    n_samples = int((train_percent / 100) * N)
-    print("{}% == {} samples...".format(train_percent, n_samples))
-    label = "{}".format(train_percent, n_samples)
+for sample_n in sample_subset:
+    #n_samples = int((train_percent / 100) * N)
+    print("{} samples...".format(sample_n))
+    label = "{}".format(sample_n)
 
     # So we consider num_trials=100 subsamples, and train a model on each.
     scores[label] = []
     for i in range(num_trials):
         X_sample, y_sample = resample(
-            X_train, y_train, n_samples=n_samples, replace=False
+            X_train, y_train, n_samples=sample_n, replace=False
         )  # type:ignore
         # Note here, I'm using a simple classifier for speed, rather than the best.
-        clf = SGDClassifier(random_state=RANDOM_SEED + train_percent + i)
+        #clf = Perceptron(penalty= None, max_iter=1000)
+        clf = SGDClassifier(random_state=RANDOM_SEED + sample_n + i)
+        # max_depth = 9, random_state=RANDOM_SEED + train_percent + i
         clf.fit(X_sample, y_sample)
         # so we get 100 scores per percentage-point.
         scores[label].append(clf.score(X_vali, y_vali))
@@ -80,11 +86,11 @@ import matplotlib.pyplot as plt
 
 means = np.array(acc_mean)
 std = np.array(acc_std)
-plt.plot(percentages, acc_mean, "o-")
-plt.fill_between(percentages, means - std, means + std, alpha=0.2)
+plt.plot(sample_subset, acc_mean, "o-")
+plt.fill_between(sample_subset, means - std, means + std, alpha=0.2)
 plt.xlabel("Percent Training Data")
 plt.ylabel("Mean Accuracy")
-plt.xlim([0, 100])
+plt.xlim([0, N])
 plt.title("Shaded Accuracy Plot")
 plt.savefig("graphs/p09-area-Accuracy.png")
 plt.show()
@@ -98,6 +104,8 @@ simple_boxplot(
     ylabel="Accuracy",
     save="graphs/p09-boxplots-Accuracy.png",
 )
+
+
 
 # TODO: (practical tasks)
 # 1. Swap in a better, but potentially more expensive classifier.

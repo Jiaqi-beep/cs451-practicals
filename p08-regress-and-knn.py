@@ -33,8 +33,13 @@ with open(dataset_local_path("AirQualityUCI.csv")) as fp:
             elif column_name == "Time":
                 time = column_value
             else:
-                datapoint[column_name] = float(column_value.replace(",", "."))
+                as_float = float(column_value.replace(",", "."))
+                if as_float == -200:
+                    continue
+                datapoint[column_name] = as_float
         if not datapoint:
+            continue
+        if "CO(GT)" not in datapoint:
             continue
         target = datapoint["CO(GT)"]
         del datapoint["CO(GT)"]
@@ -82,10 +87,32 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.neighbors import KNeighborsRegressor
 
-m = KNeighborsRegressor(n_neighbors=5, weights="distance")
-m.fit(X_train, y_train)
+from tqdm import tqdm
 
-print(m.score(X_vali, y_vali))
+
+dtree = DecisionTreeRegressor(max_depth = 9)
+dtree.fit(X_train, y_train)
+print(dtree, dtree.score(X_vali, y_vali))
+
+knn = KNeighborsRegressor(n_neighbors=5, weights="distance")
+knn.fit(X_train, y_train)
+print(knn, knn.score(X_vali, y_vali))
+
+knn_y_pred = knn.predict(X_vali)
+
+'''
+mlp = MLPRegressor(hidden_layer_sizes=(32,))
+for iter in range(1000):
+    mlp.partial_fit(X_train, y_train)
+print(mlp, mlp.score(X_vali, y_vali))
+'''
+
+sgd = SGDRegressor()
+for iter in range(1000):
+    sgd.partial_fit(X_train, y_train)
+print(sgd, sgd.score(X_vali, y_vali))
+
+
 
 ## Lab TODO:
 # Mandatory:
@@ -96,9 +123,56 @@ print(m.score(X_vali, y_vali))
 #    - Try at least one, plot a (y_pred, y_actual) scatter plot (e.g., visualize correlation / R**2)
 #    - [Difficult] see the brute-force kNN below, try to refactor the loops out of python.
 
-# %% kNN Brute Force Below:
-# Note, this is really slow (see progress bar!)
 
+import matplotlib.pyplot as plt
+# scatter-plot:
+#plt.plot(xs, ys, label="{} Train".format(key), alpha=0.7)
+# scatter-plot: (maybe these look nicer to you?)
+plt.scatter(knn_y_pred, y_vali, label="key", alpha=0.7, marker=".")
+#plt.ylim((0.75, 1.0))
+plt.title("knn y-pred y-actual scatter plot")
+plt.xlabel("y_pred")
+plt.ylabel("y_actual")
+plt.xticks(np.arange(0, 10, 1))
+plt.yticks(np.arange(0, 10, 1))
+#plt.legend()
+plt.tight_layout()
+#plt.savefig("graphs/p07-{}-curve-{}.png".format(key, norm))
+plt.show()
+
+
+# %% kNN Brute Force Below:
+from scipy.spatial import distance
+from statistics import mean
+do_slow = True
+
+def knn_manual_faster(k: int = 3) -> None:
+    dist_matrix = distance.cdist(X_vali, X_train, 'euclidean')
+    y_index = dist_matrix.argsort()[:,0:k]
+    y_vali_pred = np.apply_along_axis(lambda arr: mean([y_train[arr[i]] for i in range(k)]), 1, y_index)
+
+    from sklearn.metrics import r2_score
+    print("Manual KNN:", r2_score(y_vali, y_vali_pred))
+
+
+if do_slow:
+    knn_manual_faster()
+
+
+    '''
+    y_vali_pred = []
+    for row_index in tqdm(range(len(y_vali)), desc="kNN Brute Force"):
+        example = X_vali[row_index, :]
+        y_vali_pred.append(knn_regress(X_train, y_train, example, k=3))
+
+    from sklearn.metrics import r2_score
+
+    print("Manual KNN:", r2_score(y_vali, y_vali_pred))
+    '''
+
+
+
+from scipy.spatial import distance
 
 def knn_regress(
     X_train: np.ndarray, y_train: np.ndarray, x: np.ndarray, k: int = 3
@@ -112,29 +186,16 @@ def knn_regress(
     # (distance, y_value)
     # This should be a heap, not a list, but python's heapq is annoying.
     scored_examples: List[Tuple[float, float]] = []
-    for (i, row) in enumerate(X_train):
+    for (i, row) in enumerate(X_train):       ## row is np.ndarray
         distance = euclidean(row, x)
         scored_examples.append((distance, y_train[i]))
 
     # find closest-k:
     sum_y = 0.0
-    for (_distance, close_y) in sorted(scored_examples)[:k]:
+    for (_distance, close_y) in sorted(scored_examples)[:k]: # closest k distances after sorting
         sum_y += close_y
     return sum_y / k
 
-
-do_slow = False
-
-if do_slow:
-    # Loop over each element of validation set, and predict based on training.
-    y_vali_pred = []
-    for row_index in tqdm(range(len(y_vali)), desc="kNN Brute Force"):
-        example = X_vali[row_index, :]
-        y_vali_pred.append(knn_regress(X_train, y_train, example, k=3))
-
-    from sklearn.metrics import r2_score
-
-    print("Manual KNN:", r2_score(y_vali, y_vali_pred))
 
     ## TODO (optional, Challenging!) (efficiency / matrix ops)
     #

@@ -35,6 +35,8 @@ with open(dataset_local_path("poetry_id.jsonl")) as fp:
         # hold onto this single dictionary.
         examples.append(keep)
 
+print(examples[16])
+
 #%% Convert data to 'matrices'
 # NOTE: there are better ways to do this, built-in to scikit-learn. We will see them soon.
 
