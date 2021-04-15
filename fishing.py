@@ -92,7 +92,7 @@ from sklearn.utils import resample
 # and their hyperparameters
 X_temp, y_temp = resample(
     X_train, y_train, n_samples=1500, replace=False
-)  # type:ignore
+)
 
 print("training size for models: ", X_temp.shape)
 
@@ -172,11 +172,9 @@ def consider_neural_net() -> ExperimentResult:
                     performances.append(result)
     return max(performances, key=lambda result: result.vali_acc)
 
-
-
 dtree = consider_decision_trees()
 knn = consider_knn()
-#mlp = consider_neural_net() ## <- mlp is too slow to run
+#mlp = consider_neural_net() ## <- mlp is too slow to run and sgd spits out negative scores
 
 print("\nBest DTree:\n", dtree)
 print("Best knn:\n", knn)
@@ -189,7 +187,8 @@ print("Best knn:\n", knn)
 # ExperimentResult(vali_acc=0.7033403492268693, params={'n_neighbors': 8, 'weights': 'uniform'}, model=KNeighborsRegressor(n_neighbors=8))
 
 # Linear model does not work for this dataset. Features are highly correlated, making the linear model
-# very unstable. Large number of iterations is needed to reach the depth of optimization
+# very unstable. Large number of iterations is needed to reach the depth of optimization for linear modesl,
+# and it is too slow to train.
 
 del X_temp, y_temp
 
@@ -197,15 +196,18 @@ from shared import simple_boxplot, bootstrap_regressor
 
 simple_boxplot(
     {
-        #"Decision Tree": bootstrap_regressor(dtree.model, X_vali, y_vali),
-        #"knn": bootstrap_regressor(knn.model, X_vali, y_vali),
-        "MLP/NN": bootstrap_accuracy(mlp.model, X_vali, y_vali),
+        "Decision Tree": bootstrap_regressor(dtree.model, X_vali, y_vali),
+        "knn": bootstrap_regressor(knn.model, X_vali, y_vali),
+        #"MLP/NN": bootstrap_accuracy(mlp.model, X_vali, y_vali),
     },
     title="Validation Accuracy",
     xlabel="Model",
-    ylabel="Accuracy",
+    ylabel="Mean Squared Error",
     save="graphs/project/model-cmp.png",
 )
+
+## Decision tree performs better than knn for this dataset. The bootstrapped boxplot shows
+# that this dataset has rather high quality without many outliers and much variance.
 
 del dtree, knn
 
@@ -242,9 +244,26 @@ for train_percent in percentages:
     acc_mean.append(np.mean(scores[label]))
     acc_std.append(np.std(scores[label]))
 
+# line plot with shaded variance regions
+import matplotlib.pyplot as plt
+
+# convert our list of means/std to numpy arrays to add & subtract them.
+means = np.array(acc_mean)
+std = np.array(acc_std)
+# plot line from means
+plt.plot(percentages, acc_mean, "o-")
+# plot area from means & stddev
+plt.fill_between(percentages, means - std, means + std, alpha=0.2)
+
+# Manage axes/show:
+plt.xlabel("Percent Training Data")
+plt.ylabel("Mean Accuracy")
+plt.xlim([0, 100])
+plt.title("Shaded Accuracy Plot")
+plt.savefig("graphs/project/fishing-area-Accuracy.png")
+plt.show()
 
 #%% boxplot to show the learning curve training data
-from shared import simple_boxplot
 simple_boxplot(
     scores,
     "Learning Curve",
@@ -253,7 +272,23 @@ simple_boxplot(
     save="graphs/project/fishing-boxplots-Accuracy.png",
 )
 
-# The size of my training data plays a huge role on the accuracy of the model
+# As the size of the dataset gets bigger, the accuracy of the decision tree model becomes a lot
+# higher.
 
 
-#%% Thoughts on feature design / usefulness
+print("\n##### Thoughts on feature design / usefulness #####")
+print("see comments")
+
+# I do not have a lot of features so it is suitable to use methods in p10 to figure out the importances
+# of each feature with a smaller subset of the training data. Further datapoints to add could include ecological
+# variables. I don't have much insights as to what variables are more valuable than others, since I don't know
+# fishing patterns.
+
+# (1) should I group data by week to make the time series more reliable?
+# The fact that my dataset spans the entire year seems to really assist the accuracy of the model
+# (which also intuitively make sense). However, splitting the data by week/month would confirm this intuition.
+# (2) what are the opportunities for train/test splitting on this data?
+# (3) Should I be using K-fold cross-validation?
+# This is definitley possible for my dataset, because of the large size of my data. I trained my models above
+# on a very small subset of the dataset. The next step wcould be attempting k-fold cross-validation on the entire
+# dataset to see if the hyperparameters derived still hold.
