@@ -18,7 +18,6 @@ df: pd.DataFrame = pd.read_json(
     dataset_local_path("lit-wiki-2020.jsonl.gz"), lines=True
 )
 
-
 # Regular expresssions to grab parts of the text:
 WORDS = re.compile(r"(\w+)")
 NUMBERS = re.compile(r"(\d+)")
@@ -42,11 +41,12 @@ def extract_features(row):
         "disambig": "disambiguation" in title,
         "page_rank": row["page_rank"],
         "length": len(words),
-        # "18xx": sum(1 for x in numbers if 1800 < x <= 1900),
-        "random1": random.random(),
-        "random2": random.random(),
-        "random3": random.random(),
-        "random4": random.random(),
+        "18xx": sum(1 for x in numbers if 1800 < x <= 1900),
+        "19/20xx": sum(2 for x in numbers if x > 1900),
+        #"random1": random.random(),
+        #"random2": random.random(),
+        #"random3": random.random(),
+        #"random4": random.random(),
     }
     if len(numbers) > 0:
         new_features["mean_n"] = np.mean(numbers)
@@ -114,6 +114,7 @@ importances = dict((name, []) for name in numberer.feature_names_)
 for tree in rf.estimators_:
     for name, weight in zip(numberer.feature_names_, tree.feature_importances_):
         importances[name].append(weight)
+
 
 # Think: what does 'how many splits' actually measure? Usefulness, or something else?
 simple_boxplot(
