@@ -35,22 +35,30 @@ def extract_features(row):
 
     new_features: T.Dict[str, T.Any] = {}
     words = WORDS.findall(body)
+    word_length = 0
+    num_upper = 0
+    if len(words) > 0:
+        word_length = sum([len(word) for word in words]) / len(words)
+        num_upper = sum([word.islower() for word in words]) / len(words)
     numbers = [int(x) for x in NUMBERS.findall(body)]
 
     new_features = {
-        "disambig": "disambiguation" in title,
-        "page_rank": row["page_rank"],
+        #"disambig": "disambiguation" in title,
+        #"page_rank": row["page_rank"],
         "length": len(words),
         "18xx": sum(1 for x in numbers if 1800 < x <= 1900),
-        "19/20xx": sum(2 for x in numbers if x > 1900),
+        "19/20xx": sum(1 for x in numbers if 1900 < x <= 2021),
+        #"word length": word_length,
+        "upper case": num_upper,
         #"random1": random.random(),
         #"random2": random.random(),
         #"random3": random.random(),
         #"random4": random.random(),
     }
     if len(numbers) > 0:
-        new_features["mean_n"] = np.mean(numbers)
-        new_features["std_n"] = np.std(numbers)
+        new_features["% number"] = len(numbers) / len(words)
+        #new_features["mean_n"] = np.mean(numbers)
+        #new_features["std_n"] = np.std(numbers)
 
     return new_features
 
@@ -104,6 +112,8 @@ test_y, test_X = prepare_data(test_f)
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import Perceptron
+from sklearn.neural_network import MLPClassifier
 
 # Direct feature-importances (can think of them as how many times a feature was used):
 rf = RandomForestClassifier(random_state=RAND, n_estimators=100)
@@ -136,6 +146,7 @@ class Model:
     m: T.Any
 
 
+# (optional). Consider improving ``train_and_eval`` to use more powerful models
 def train_and_eval(name, x, y, vx, vy):
     """ Train and Eval a single model. """
     options: T.List[Model] = []
@@ -150,6 +161,22 @@ def train_and_eval(name, x, y, vx, vy):
         )
         m.fit(x, y)
         options.append(Model(m.score(vx, vy), m))
+
+    for rnd in range(3):
+        m = Perceptron(random_state=rnd, penalty=None, max_iter=1000)
+        m.fit(x, y)
+        options.append(Model(m.score(vx, vy), m))
+
+    for rnd in range(3):
+        for d in range(4, 9):
+            params = {
+                "criterion": "entropy",
+                "max_depth": d,
+                "random_state": rnd,
+            }
+            m = RandomForestClassifier(**params)
+            m.fit(x, y)
+            options.append(Model(m.score(vx, vy), m))
 
     # pick the best model:
     best = max(options, key=lambda m: m.vali_score)
@@ -198,5 +225,3 @@ plt.show()
 # 2.2. 'List_of_...' pages aren't considered literary
 # 3. Remove bad features (that weren't as obvious!)
 # ... could adding a random feature help you here?
-
-# (optional). Consider improving ``train_and_eval`` to use more powerful models

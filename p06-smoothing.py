@@ -50,7 +50,6 @@ else:
         examples.append(keep)
 
 #%% Split data:
-#print(examples[0])
 
 RANDOM_SEED = 1234
 
@@ -93,6 +92,7 @@ X_vali = word_features.transform(ex_vali)
 X_test = word_features.transform(ex_test)
 
 print(X_train.shape, X_vali.shape, X_test.shape)
+# (942, 239880) (486, 239880) (476, 239880)
 
 #%% Accumulate results here; to be box-plotted.
 results: Dict[str, List[float]] = {}

@@ -75,7 +75,6 @@ for sample_n in sample_subset:
         clf = SGDClassifier(random_state=RANDOM_SEED + sample_n + i)
         # max_depth = 9, random_state=RANDOM_SEED + train_percent + i
         clf.fit(X_sample, y_sample)
-        # so we get 100 scores per percentage-point.
         scores[label].append(clf.score(X_vali, y_vali))
     # We'll first look at a line-plot of the mean:
     acc_mean.append(np.mean(scores[label]))
@@ -88,12 +87,11 @@ import matplotlib.pyplot as plt
 means = np.array(acc_mean)
 std = np.array(acc_std)
 # plot line from means
-plt.plot(percentages, acc_mean, "o-")
+plt.plot(sample_subset, acc_mean, "o-")
 # plot area from means & stddev
-plt.fill_between(percentages, means - std, means + std, alpha=0.2)
-
+plt.fill_between(sample_subset, means - std, means + std, alpha=0.2)
 # Manage axes/show:
-plt.xlabel("Percent Training Data")
+plt.xlabel("Training Data by 50")
 plt.ylabel("Mean Accuracy")
 plt.xlim([0, N])
 plt.title("Shaded Accuracy Plot")

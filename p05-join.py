@@ -118,6 +118,9 @@ X_train = word_to_column.transform(ex_train)
 X_vali = word_to_column.transform(ex_vali)
 X_test = word_to_column.transform(ex_test)
 
+#print(X_train)
+#CRASH
+
 
 print("Ready to Learn!")
 from sklearn.linear_model import LogisticRegression, SGDClassifier, Perceptron
@@ -165,11 +168,15 @@ print(bootstrap_acc[:1])
 print(bootstrap_auc[:1])
 
 plt.boxplot([bootstrap_acc, bootstrap_auc])
-plt.xticks(ticks=[1,2], labels=["Seed-bootstrap_acc", "bootstrap_auc"])
+plt.xticks(ticks=[1,2], labels=["bootstrap_acc", "bootstrap_auc"])
 plt.xlabel("DecisionTree bootstraps")
 plt.ylabel("Accuracy")
 plt.ylim([0.3, 1.0])
 plt.show()
+
+# 2.D. Is it randomness? Control for random_state parameters!
+
+
 
 
 """
@@ -189,5 +196,3 @@ DTree:
         Vali-AUC: 0.71
 """
 TODO("2. Explore why DecisionTrees are not beating linear models. Answer one of:")
-
-TODO("2.D. Is it randomness? Control for random_state parameters!")

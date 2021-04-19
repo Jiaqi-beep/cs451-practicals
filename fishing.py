@@ -73,7 +73,7 @@ rX_train, rX_vali, y_train, y_vali = train_test_split(
 #%% use MinMaxScaler to scale down X
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-scaling = MinMaxScaler()
+scaling = StandardScaler()
 X_train = scaling.fit_transform(rX_train)
 X_vali = scaling.transform(rX_vali)
 X_test = scaling.transform(rX_test)
