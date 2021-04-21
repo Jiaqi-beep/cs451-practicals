@@ -48,7 +48,7 @@ X_test: np.ndarray = scale.transform(rX_test)  # type:ignore
 N = len(y_train)
 print(N)
 num_trials = 100
-sample_subset = list(range(50, N, 50))
+sample_subset = list(range(50, N, 100))
 sample_subset.append(N)
 scores = {}
 acc_mean = []
