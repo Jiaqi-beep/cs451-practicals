@@ -43,9 +43,11 @@ def extract_features(row):
     numbers = [int(x) for x in NUMBERS.findall(body)]
 
     new_features = {
-        #"disambig": "disambiguation" in title,
+        #"List_of_": "List_of_" in words,
         #"page_rank": row["page_rank"],
         "length": len(words),
+        "16xx": sum(1 for x in numbers if 1600 < x <= 1700),
+        "17xx": sum(1 for x in numbers if 1700 < x <= 1800),
         "18xx": sum(1 for x in numbers if 1800 < x <= 1900),
         "19/20xx": sum(1 for x in numbers if 1900 < x <= 2021),
         #"word length": word_length,
