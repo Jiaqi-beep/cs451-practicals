@@ -25,11 +25,11 @@ X_vali = Xd_vali["numeric"]
 #%%
 from sklearn.linear_model import LogisticRegression
 
-m = LogisticRegression(random_state=RANDOM_SEED, penalty="none", max_iter=2000)
-m.fit(X_train, y_train)
+#m = LogisticRegression(random_state=RANDOM_SEED, penalty="none", max_iter=2000)
+#m.fit(X_train, y_train)
 
-print("skLearn-LR AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
-print("skLearn-LR Acc: {:.3}".format(m.score(X_vali, y_vali)))
+#print("skLearn-LR AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
+#print("skLearn-LR Acc: {:.3}".format(m.score(X_vali, y_vali)))
 
 
 @dataclass
@@ -111,7 +111,7 @@ def train_logistic_regression_gd(name: str, num_iter=100):
     # Alpha is the 'learning rate'.
     alpha = 0.1
 
-    for _ in tqdm(range(num_iter), total=num_iter, desc=name):
+    for _ in range(num_iter):
         # Each step is scaled by alpha, to control how fast we move, overall:
         m.weights += alpha * compute_gradient_update(m, X_train, y_train)
         # record performance:
@@ -119,33 +119,50 @@ def train_logistic_regression_gd(name: str, num_iter=100):
     return m
 
 
-m = train_logistic_regression_gd("LR-GD", num_iter=2000)
-print("LR-GD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
-print("LR-GD Acc: {:.3}".format(m.score(X_vali, y_vali)))
+#m = train_logistic_regression_gd("LR-GD", num_iter=2000)
+#print("LR-GD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
+#print("LR-GD Acc: {:.3}".format(m.score(X_vali, y_vali)))
 
 
-def train_logistic_regression_sgd_opt(name: str, num_iter=100, minibatch_size=512):
+# TODO:
+#
+# 1. pick SGD
+
+def train_logistic_regression_sgd_opt(name: str, alpha: float, num_iter=100, minibatch_size=512):
     """ This is bootstrap-sampling minibatch SGD """
     plot = ModelTrainingCurve()
-    learning_curves[name] = plot
+    key = name + "-alpha: " + str(alpha)
+    learning_curves[key] = plot
 
     m = LogisticRegressionModel.random(D)
-    alpha = 0.1
     n_samples = max(1, N // minibatch_size)
-
-    for _ in tqdm(range(num_iter), total=num_iter, desc=name):
+    for _ in range(num_iter):
         for _ in range(n_samples):
             X_mb, y_mb = resample(X_train, y_train, n_samples=minibatch_size)
             m.weights += alpha * compute_gradient_update(m, X_mb, y_mb)
         # record performance:
         plot.add_sample(m, X_train, y_train, X_vali, y_vali)
+
     return m
 
 
-m = train_logistic_regression_sgd_opt("LR-SGD", num_iter=2000)
-print("LR-SGD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
-print("LR-SGD Acc: {:.3}".format(m.score(X_vali, y_vali)))
+# 2. pick a smaller max_iter that gets good performance.
+# When num_iter is 1000, both the training and validation curve has flattened out more or less
 
+for alpha in [0.05, 0.1, 0.5, 1.0, 2.0]:
+    m = train_logistic_regression_sgd_opt("LR-SGD", alpha, num_iter=1000)
+    print("LR-SGD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_vali, y_vali))))
+    print("LR-SGD Acc: {:.3}".format(m.score(X_vali, y_vali)))
+
+
+# (A) Explore Learning Rates:
+#
+# 3. make ``alpha``, the learning rate, a parameter of the train function.
+# 4. make a graph including some faster and slower alphas
+# .... what do you notice?
+
+## Both training and validation curves move up (flatten out sooner) as alpha increases, but
+# the change becomes less noticeable for alpha greater or equal to 0.5
 
 ## Create training curve plots:
 import matplotlib.pyplot as plt
@@ -174,22 +191,114 @@ plt.savefig("graphs/p12-vali-curves.png")
 plt.show()
 
 
-# TODO:
-#
-# 1. pick SGD or GD (I recommend SGD)
-# 2. pick a smaller max_iter that gets good performance.
-
-# Do either A or B:
-
-# (A) Explore Learning Rates:
-#
-# 3. make ``alpha``, the learning rate, a parameter of the train function.
-# 4. make a graph including some faster and slower alphas:
-# .... alpha = [0.05, 0.1, 0.5, 1.0]
-# .... what do you notice?
-
 # (B) Explore 'Automatic/Early Stopping'
 #
 # 3. split the 'training' data into **another** validation set.
 # 4. modify the SGD/GD loop to keep track of loss/accuarcy on this mini validation set at each iteration.
 # 5. add a tolerance parameter, and stop looping when the loss/accuracy on the mini validation set stops going down.
+
+### comment out option A and uncomment option B to see option B
+
+'''
+
+X_new_vali, X_rest, y_new_vali, y_rest = train_test_split (
+        X_train,
+        y_train,
+        train_size=0.4,
+        shuffle=True,
+        random_state=RANDOM_SEED,
+)
+
+def compute_gradient_update(m, X, y) -> np.ndarray:
+    """ Predict using m over X; compare to y, calculate the gradient update."""
+    (N, D) = X.shape
+    y_hat = m.decision_function(X)
+    y_diffs = np.array(y_hat - y)
+    # look at all the predictions to compute our derivative:
+    gradient = np.zeros((D + 1, 1))
+
+    # Literally a bajillion times faster if we ditch the for loops!
+    # 1. scale X matrix by the y_diffs; then sum columns:
+    x_scaled_by_y = X.T * y_diffs
+    non_bias_gradient = np.sum(x_scaled_by_y, axis=1)
+    gradient[:D] = non_bias_gradient.reshape((D, 1))
+    # 2. the bias term is always 1 in X rows; so we just sum up the y_diffs for this.
+    gradient[D] += np.sum(y_diffs)
+
+    # take an gradient step in the negative direction ('down')
+    return -(gradient / N)
+
+def train_logistic_regression_gd(name: str, num_iter=100, tolerance=0.929):
+    plot = ModelTrainingCurve()
+    learning_curves[name] = plot
+
+    m = LogisticRegressionModel.random(D)
+    # Alpha is the 'learning rate'.
+    alpha = 0.1
+    for _ in range(num_iter):
+        # Each step is scaled by alpha, to control how fast we move, overall:
+        m.weights += alpha * compute_gradient_update(m, X_rest, y_rest)
+
+        if m.score(X_new_vali, y_new_vali) >= tolerance:
+            break
+        # record performance:
+        plot.add_sample(m, X_rest, y_rest, X_new_vali, y_new_vali)
+
+    return m
+
+def train_logistic_regression_sgd_opt(name: str, num_iter=100, minibatch_size=512, tolerance=0.935):
+    """ This is bootstrap-sampling minibatch SGD """
+    plot = ModelTrainingCurve()
+    learning_curves[name] = plot
+
+    alpha = 0.1
+    m = LogisticRegressionModel.random(D)
+    n_samples = max(1, N // minibatch_size)
+
+    for _ in range(num_iter):
+        for _ in range(n_samples):
+            X_mb, y_mb = resample(X_rest, y_rest, n_samples=minibatch_size)
+            m.weights += alpha * compute_gradient_update(m, X_mb, y_mb)
+
+        if m.score(X_new_vali, y_new_vali) >= tolerance:
+            break
+        # record performance:
+        plot.add_sample(m, X_rest, y_rest, X_new_vali, y_new_vali)
+
+    return m
+
+m = train_logistic_regression_gd("LR-GD", num_iter=2000)
+print("LR-GD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_new_vali, y_new_vali))))
+print("LR-GD Acc: {:.3}".format(m.score(X_new_vali, y_new_vali)))
+
+
+m = train_logistic_regression_sgd_opt("LR-SGD", num_iter=1000)
+print("LR-SGD AUC: {:.3}".format(np.mean(bootstrap_auc(m, X_new_vali, y_new_vali))))
+print("LR-SGD Acc: {:.3}".format(m.score(X_new_vali, y_new_vali)))
+
+## Create training curve plots:
+import matplotlib.pyplot as plt
+
+for key, dataset in learning_curves.items():
+    xs = np.array(list(range(len(dataset.train))))
+    plt.plot(xs, dataset.train, label="{}".format(key), alpha=0.7)
+plt.title("Training Curves")
+plt.xlabel("Iteration")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.tight_layout()
+plt.savefig("graphs/p12-training-curves.png")
+plt.show()
+
+## Create validation curve plots:
+for key, dataset in learning_curves.items():
+    xs = np.array(list(range(len(dataset.validation))))
+    plt.plot(xs, dataset.validation, label="{}".format(key), alpha=0.7)
+plt.title("Validation Curves")
+plt.xlabel("Iteration")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.tight_layout()
+plt.savefig("graphs/p12-vali-curves.png")
+plt.show()
+'''
