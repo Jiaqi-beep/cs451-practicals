@@ -44,7 +44,7 @@ configs = []
 configs.append({"kernel": "linear"})
 configs.append({"kernel": "poly", "degree": 2})
 configs.append({"kernel": "poly", "degree": 3})
-configs.append({"kernel": "rbf"})
+configs.append({"kernel": "rbf", "gamma": 1.e-04})
 # configs.append({"kernel": "sigmoid"}) # just awful.
 
 
@@ -63,7 +63,7 @@ class ModelInfo:
 for cfg in configs:
     variants: T.List[ModelInfo] = []
     for class_weights in [None, "balanced"]:
-        for c_val in [1.0]:
+        for c_val in [1.0, 2.0, 2.5, 3.0, 10]:
             svm = SVMClassifier(C=c_val, class_weight=class_weights, **cfg)
             svm.fit(X_train, y_train)
             name = "k={}{} C={} {}".format(

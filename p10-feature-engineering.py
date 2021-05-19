@@ -61,7 +61,6 @@ def extract_features(row):
         new_features["% number"] = len(numbers) / len(words)
         #new_features["mean_n"] = np.mean(numbers)
         #new_features["std_n"] = np.std(numbers)
-
     return new_features
 
 

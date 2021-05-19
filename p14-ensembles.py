@@ -67,7 +67,8 @@ for i in range(100):
     X_sample, y_sample = resample(X_train, y_train)  # type:ignore
 
     # TODO create a tree model.
-    tree = TODO("train and fit a model to the sampled data")
+    tree = DecisionTreeClassifier()
+    tree.fit(X_sample, y_sample)
 
     # TODO Experiment:
     # What if instead of every tree having the same 1.0 weight, we considered some alternatives?
@@ -75,7 +76,7 @@ for i in range(100):
     #  - weight = the accuracy of that tree on the validation set.
     #  - weight = random.random()
     #  - weight = 0.1
-    weight = 1.0
+    weight = random.random()
 
     # hold onto it for voting
     forest.insert(weight, tree)

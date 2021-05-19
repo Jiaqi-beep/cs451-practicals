@@ -1,12 +1,9 @@
 """
 In this lab, we'll go ahead and use the sklearn API to learn a decision tree over some actual data!
-
 Documentation:
 https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html
-
 We'll need to install sklearn.
 Either use the GUI, or use pip:
-
     pip install scikit-learn
     # or: use install everything from the requirements file.
     pip install -r requirements.txt
